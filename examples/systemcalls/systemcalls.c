@@ -1,4 +1,10 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -11,13 +17,16 @@ bool do_system(const char *cmd)
 {
 
 /*
- * TODO  add your code here
  *  Call the system() function with the command set in the cmd
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int err = system(cmd);
 
-    return true;
+    if (err != -1)
+        return false;
+    else
+        return true;
 }
 
 /**
@@ -50,7 +59,6 @@ bool do_exec(int count, ...)
     command[count] = command[count];
 
 /*
- * TODO:
  *   Execute a system command by calling fork, execv(),
  *   and wait instead of system (see LSP page 161).
  *   Use the command[0] as the full path to the command to execute
@@ -58,6 +66,25 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+    if(command[0][0] != '/')
+        return false;
+    if(command[2][0]  != '/')
+        return false;
+
+    int pid = fork();
+    
+    if (pid == -1)
+    {
+        return false;
+    }
+    else if (pid > 0)
+    {
+        wait(NULL);
+    }
+    else
+    {
+        execv(command[0], command );
+    }
 
     va_end(args);
 
@@ -86,12 +113,32 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
 
 
 /*
- * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
  *   redirect standard out to a file specified by outputfile.
  *   The rest of the behaviour is same as do_exec()
  *
 */
+    int pid = fork();
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    
+    if (pid == -1)
+    {
+        return false;
+    }
+    else if (pid > 0)
+    {
+        wait(NULL);
+    }
+    else
+    {
+        if (dup2(fd, 1) < 0) 
+        { 
+            return false;
+        }
+        close(fd);
+        execv(command[0], command );
+        return false; //only returns if fails.
+    }
 
     va_end(args);
 
