@@ -58,8 +58,8 @@ fi
 cd "$OUTDIR"
 mkdir ${OUTDIR}/rootfs
 cd ${OUTDIR}/rootfs
-mkdir bin dev etc home lib lib64 proc sbin sys tmp usr va var
-mkdir usr/bin usr/lib usr/sbin
+mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr va var
+mkdir -p usr/bin usr/lib usr/sbin
 mkdir -p var/log
 cd ${OUTDIR}/rootfs
 sudo chown -R root:root *
@@ -86,6 +86,7 @@ fi
 # TODO: Make and install busybox
 echo "MAKE BUSYBOX"
 #try to make it so that sudo doesn't ignore the path
+sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu-
 sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- install
 cd ${OUTDIR}/rootfs
 #DONE
@@ -110,8 +111,10 @@ sudo cp -a $SYSROOT/lib64/libm-2.31.so lib64
 # DONE
 
 # TODO: Make device nodes
-sudo mknod -m 666 dev/null c 1 3
-sudo mknod -m 666 dev/console c 5 1
+cd ${OUTDIR}/rootfs
+mknod -m 666 dev/null c 1 3
+mknod -m 666 dev/console c 5 1
+mknod -m 666 dev/ram c 0 0
 # DONE
 
 # TODO: Adding Modules to the rootfs
@@ -139,7 +142,10 @@ sudo chown -R root:root *
 # DONE
 
 # TODO: Create initramfs.cpio.gz
-#sudo find . | cpio --owner root:root -ovH newc | gzip > ${OUTDIR}/initramfs.cpio.gz
-find -print0 | cpio -0oH newc | gzip -9 > ${OUTDIR}/initramfs.cpio.gz
+cd ${OUTDIR}/rootfs
+find . -print -depth | cpio -ov --owner root:root > ${OUTDIR}/initramfs.cpio
+cd ..
+gzip initramfs.cpio
+#find -print0 | cpio -0oH newc | gzip -9 > ${OUTDIR}/initramfs.cpio.gz
 
 # DONE
