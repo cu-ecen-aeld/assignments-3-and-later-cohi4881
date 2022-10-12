@@ -38,13 +38,13 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make -j4 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} all
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
+    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} dtbs
     # DONE
 fi
 
 echo "Adding the Image in outdir"
-cp "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "$OUTDIR"
+cp -a "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "$OUTDIR"
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -65,6 +65,8 @@ cd ${OUTDIR}/rootfs
 sudo chown -R root:root *
 # DONE
 
+
+export PATH=${PATH}:/home/cohi4881/install-lnx/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/bin
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
 then
@@ -73,8 +75,9 @@ then
     git checkout ${BUSYBOX_VERSION}
     # TODO:  Configure busybox
     echo "CONFIG BUSYBOX"
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} distclean
-    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
+    #try to make it so that sudo doesn't ignore the path
+    sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- distclean
+    sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- defconfig
     #DONE
 else
     cd busybox
@@ -82,7 +85,8 @@ fi
 
 # TODO: Make and install busybox
 echo "MAKE BUSYBOX"
-sudo make CONFIG_PREFIX=${OUTDIR}/rootfs/bin ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
+#try to make it so that sudo doesn't ignore the path
+sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- install
 cd ${OUTDIR}/rootfs
 #DONE
 
@@ -91,16 +95,18 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
-${CROSS_COMPILE}gcc -print-sysroot
-cd $SYSROOT
-ls -l lib/ld-linux-armhf.so.3
+SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
+echo $SYSROOT
 cd ${OUTDIR}/rootfs
-cp -a $SYSROOT/lib/ld-linux-armhf.so.3 lib
-cp -a $SYSROOT/lib/ld-2.22.so lib
-cp -a $SYSROOT/lib/libc.so.6 lib
-cp -a $SYSROOT/lib/libc-2.22.so lib
-cp -a $SYSROOT/lib/libm.so.6 lib
-cp -a $SYSROOT/lib/libm-2.22.so lib
+sudo chown -R root:root *
+sudo cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
+sudo cp -a $SYSROOT/lib64/ld-2.31.so lib64
+sudo cp -a $SYSROOT/lib64/libc.so.6 lib64
+sudo cp -a $SYSROOT/lib64/libc-2.31.so lib64
+sudo cp -a $SYSROOT/lib64/libresolv.so.2 lib64
+sudo cp -a $SYSROOT/lib64/libresolv-2.31.so lib64
+sudo cp -a $SYSROOT/lib64/libm.so.6 lib64
+sudo cp -a $SYSROOT/lib64/libm-2.31.so lib64
 # DONE
 
 # TODO: Make device nodes
@@ -121,8 +127,10 @@ make CROSS_COMPILE=${CROSS_COMPILE}
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 cd ${FINDER_APP_DIR}
-cp -a ${FINDER_APP_DIR}/. ${OUTDIR}/rootfs/home/
-cp -a ${FINDER_APP_DIR}/../conf/username.txt ${OUTDIR}/rootfs/home/
+sudo cp -a ${FINDER_APP_DIR}/. ${OUTDIR}/rootfs/home/
+sudo rm ${OUTDIR}/rootfs/home/conf
+sudo mkdir ${OUTDIR}/rootfs/home/conf
+sudo cp -a ${FINDER_APP_DIR}/../conf/username.txt ${OUTDIR}/rootfs/home/conf/username.txt
 # DONE
 
 # TODO: Chown the root directory
@@ -131,6 +139,7 @@ sudo chown -R root:root *
 # DONE
 
 # TODO: Create initramfs.cpio.gz
-cd ${OUTDIR}/rootfs
-find . | cpio -o | gzip > ${OUTDIR}/initramfs.cpio.gz
+#sudo find . | cpio --owner root:root -ovH newc | gzip > ${OUTDIR}/initramfs.cpio.gz
+find -print0 | cpio -0oH newc | gzip -9 > ${OUTDIR}/initramfs.cpio.gz
+
 # DONE
