@@ -38,31 +38,30 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} mrproper
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} defconfig
     make -j4 ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} all
-    #make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
+    make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} modules
     make ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} dtbs
     # DONE
 fi
 
 echo "Adding the Image in outdir"
-cp -a "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "$OUTDIR"
+cp "${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image" "$OUTDIR"
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
 if [ -d "${OUTDIR}/rootfs" ]
 then
 	echo "Deleting rootfs directory at ${OUTDIR}/rootfs and starting over"
-    sudo rm  -rf ${OUTDIR}/rootfs
+    sudo rm -rf ${OUTDIR}/rootfs
 fi
 
 # TODO: Create necessary base directories
 cd "$OUTDIR"
-mkdir ${OUTDIR}/rootfs
+mkdir -p ${OUTDIR}/rootfs
 cd ${OUTDIR}/rootfs
 mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr va var
 mkdir -p usr/bin usr/lib usr/sbin
 mkdir -p var/log
 cd ${OUTDIR}/rootfs
-sudo chown -R root:root *
 # DONE
 
 
@@ -76,8 +75,8 @@ then
     # TODO:  Configure busybox
     echo "CONFIG BUSYBOX"
     #try to make it so that sudo doesn't ignore the path
-    sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- distclean
-    sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- defconfig
+    make distclean
+    make defconfig
     #DONE
 else
     cd busybox
@@ -86,7 +85,7 @@ fi
 # TODO: Make and install busybox
 echo "MAKE BUSYBOX"
 #try to make it so that sudo doesn't ignore the path
-sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu-
+sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu-
 sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- install
 cd ${OUTDIR}/rootfs
 #DONE
@@ -99,22 +98,20 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
 echo $SYSROOT
 cd ${OUTDIR}/rootfs
-sudo chown -R root:root *
-sudo cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
-sudo cp -a $SYSROOT/lib64/ld-2.31.so lib64
-sudo cp -a $SYSROOT/lib64/libc.so.6 lib64
-sudo cp -a $SYSROOT/lib64/libc-2.31.so lib64
-sudo cp -a $SYSROOT/lib64/libresolv.so.2 lib64
-sudo cp -a $SYSROOT/lib64/libresolv-2.31.so lib64
-sudo cp -a $SYSROOT/lib64/libm.so.6 lib64
-sudo cp -a $SYSROOT/lib64/libm-2.31.so lib64
+cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
+cp -a $SYSROOT/lib64/ld-2.31.so lib64
+cp -a $SYSROOT/lib64/libc.so.6 lib64
+cp -a $SYSROOT/lib64/libc-2.31.so lib64
+cp -a $SYSROOT/lib64/libresolv.so.2 lib64
+cp -a $SYSROOT/lib64/libresolv-2.31.so lib64
+cp -a $SYSROOT/lib64/libm.so.6 lib64
+cp -a $SYSROOT/lib64/libm-2.31.so lib64
 # DONE
 
 # TODO: Make device nodes
 cd ${OUTDIR}/rootfs
-mknod -m 666 dev/null c 1 3
-mknod -m 666 dev/console c 5 1
-mknod -m 666 dev/ram c 0 0
+sudo mknod -m 666 dev/null c 1 3
+sudo mknod -m 666 dev/console c 5 1
 # DONE
 
 # TODO: Adding Modules to the rootfs
@@ -130,10 +127,10 @@ make CROSS_COMPILE=${CROSS_COMPILE}
 # TODO: Copy the finder related scripts and executables to the /home directory
 # on the target rootfs
 cd ${FINDER_APP_DIR}
-sudo cp -a ${FINDER_APP_DIR}/. ${OUTDIR}/rootfs/home/
-sudo rm ${OUTDIR}/rootfs/home/conf
-sudo mkdir ${OUTDIR}/rootfs/home/conf
-sudo cp -a ${FINDER_APP_DIR}/../conf/username.txt ${OUTDIR}/rootfs/home/conf/username.txt
+cp -a ${FINDER_APP_DIR}/. ${OUTDIR}/rootfs/home/
+rm ${OUTDIR}/rootfs/home/conf
+mkdir ${OUTDIR}/rootfs/home/conf
+cp -a ${FINDER_APP_DIR}/../conf/username.txt ${OUTDIR}/rootfs/home/conf/username.txt
 # DONE
 
 # TODO: Chown the root directory
@@ -142,10 +139,8 @@ sudo chown -R root:root *
 # DONE
 
 # TODO: Create initramfs.cpio.gz
-cd ${OUTDIR}/rootfs
 find . -print -depth | cpio -ov --owner root:root > ${OUTDIR}/initramfs.cpio
 cd ..
 gzip initramfs.cpio
-#find -print0 | cpio -0oH newc | gzip -9 > ${OUTDIR}/initramfs.cpio.gz
 
 # DONE
