@@ -51,21 +51,20 @@ cd "$OUTDIR"
 if [ -d "${OUTDIR}/rootfs" ]
 then
 	echo "Deleting rootfs directory at ${OUTDIR}/rootfs and starting over"
-    sudo rm -rf ${OUTDIR}/rootfs
+        sudo rm -rf ${OUTDIR}/rootfs
 fi
 
 # TODO: Create necessary base directories
 cd "$OUTDIR"
 mkdir -p ${OUTDIR}/rootfs
 cd ${OUTDIR}/rootfs
-mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr va var
-mkdir -p usr/bin usr/lib usr/sbin
+mkdir bin dev etc home lib lib64 proc sbin sys tmp usr var
+mkdir usr/bin usr/lib usr/sbin
 mkdir -p var/log
-cd ${OUTDIR}/rootfs
 # DONE
 
 
-export PATH=${PATH}:/home/cohi4881/install-lnx/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/bin
+CCPATH=/home/cohi4881/install-lnx/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/bin/
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
 then
@@ -85,8 +84,8 @@ fi
 # TODO: Make and install busybox
 echo "MAKE BUSYBOX"
 #try to make it so that sudo doesn't ignore the path
-sudo env "PATH=$PATH" make ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu-
-sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=aarch64-none-linux-gnu- install
+sudo make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=$CCPATH/${CROSS_COMPILE}
+sudo make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=$CCPATH/${CROSS_COMPILE} install
 cd ${OUTDIR}/rootfs
 #DONE
 
@@ -95,8 +94,7 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
-SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
-echo $SYSROOT
+export SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
 cd ${OUTDIR}/rootfs
 cp -a $SYSROOT/lib/ld-linux-aarch64.so.1 lib
 cp -a $SYSROOT/lib64/ld-2.31.so lib64
@@ -111,7 +109,7 @@ cp -a $SYSROOT/lib64/libm-2.31.so lib64
 # TODO: Make device nodes
 cd ${OUTDIR}/rootfs
 sudo mknod -m 666 dev/null c 1 3
-sudo mknod -m 666 dev/console c 5 1
+sudo mknod -m 600 dev/console c 5 1
 # DONE
 
 # TODO: Adding Modules to the rootfs
@@ -131,6 +129,7 @@ cp -a ${FINDER_APP_DIR}/. ${OUTDIR}/rootfs/home/
 rm ${OUTDIR}/rootfs/home/conf
 mkdir ${OUTDIR}/rootfs/home/conf
 cp -a ${FINDER_APP_DIR}/../conf/username.txt ${OUTDIR}/rootfs/home/conf/username.txt
+cp -a ${FINDER_APP_DIR}/../conf/assignment.txt ${OUTDIR}/rootfs/home/conf/assignment.txt
 # DONE
 
 # TODO: Chown the root directory
@@ -139,8 +138,8 @@ sudo chown -R root:root *
 # DONE
 
 # TODO: Create initramfs.cpio.gz
-find . -print -depth | cpio -ov --owner root:root > ${OUTDIR}/initramfs.cpio
+find . | cpio -H newc -ov --owner root:root > ../initramfs.cpio
 cd ..
 gzip initramfs.cpio
-
+#mkimage -A arm -O linux -T ramdisk -d initramfs.cpio.gx uRamdisk
 # DONE
