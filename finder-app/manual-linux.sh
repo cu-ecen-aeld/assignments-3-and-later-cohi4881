@@ -84,8 +84,8 @@ fi
 # TODO: Make and install busybox
 echo "MAKE BUSYBOX"
 #try to make it so that sudo doesn't ignore the path
-sudo make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=$CCPATH/${CROSS_COMPILE}
-sudo make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=$CCPATH/${CROSS_COMPILE} install
+sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE}
+sudo env "PATH=$PATH" make CONFIG_PREFIX=${OUTDIR}/rootfs ARCH=${ARCH} CROSS_COMPILE=${CROSS_COMPILE} install
 cd ${OUTDIR}/rootfs
 #DONE
 
